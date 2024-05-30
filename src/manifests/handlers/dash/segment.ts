@@ -75,10 +75,8 @@ export default async function dashSegmentHandler(
       .register(statusCodeSCC)
       .register(timeoutSCC)
       .register(throttleSCC);
-    const [error, allMutations] = configUtils.getAllManifestConfigs(
-      reqSegmentIndexInt,
-      true
-    );
+    const [error, allMutations, , manifestStateName] =
+      configUtils.getAllManifestConfigs(reqSegmentIndexInt, true);
     if (error) {
       return generateErrorResponse(error);
     }
@@ -100,7 +98,11 @@ export default async function dashSegmentHandler(
       `${event.path}?${eventParamsString}`,
       event.headers
     );
-    return await segmentHandler(albEvent);
+    return await segmentHandler(
+      albEvent,
+      reqSegmentIndexInt,
+      manifestStateName
+    );
   } catch (err) {
     const errorRes: ServiceError = {
       status: 500,

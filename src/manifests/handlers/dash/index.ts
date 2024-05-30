@@ -1,6 +1,11 @@
 import { ALBEvent, ALBResult } from 'aws-lambda';
 import fetch from 'node-fetch';
-import { generateErrorResponse, isValidUrl } from '../../../shared/utils';
+import {
+  STATEFUL,
+  generateErrorResponse,
+  isValidUrl,
+  newState
+} from '../../../shared/utils';
 import dashManifestUtils from '../../utils/dashManifestUtils';
 
 export default async function dashHandler(event: ALBEvent): Promise<ALBResult> {
@@ -26,12 +31,18 @@ export default async function dashHandler(event: ALBEvent): Promise<ALBResult> {
         message: 'Unsuccessful Source Manifest fetch'
       });
     }
+
+    const stateKey = STATEFUL
+      ? newState({ retryCounts: new Map() })
+      : undefined;
+
     const reqQueryParams = new URLSearchParams(event.queryStringParameters);
     const text = await dashManifestResponse.text();
     const dashUtils = dashManifestUtils();
     const proxyManifest = dashUtils.createProxyDASHManifest(
       text,
-      reqQueryParams
+      reqQueryParams,
+      stateKey
     );
 
     return {

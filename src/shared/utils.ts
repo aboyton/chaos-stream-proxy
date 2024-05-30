@@ -6,7 +6,7 @@ import { ALBEvent, ALBResult, ALBEventQueryStringParameters } from 'aws-lambda';
 import { ReadStream } from 'fs';
 import { IncomingHttpHeaders } from 'http';
 import path from 'path';
-import { CorruptorConfigMap } from '../manifests/utils/configs';
+import { CorruptorConfigMap, RetryCounts } from '../manifests/utils/configs';
 import {
   FastifyReply,
   FastifyRequest,
@@ -314,6 +314,7 @@ const stateCache: NodeCache = STATEFUL
 
 type RequestState = {
   initialSequenceNumber?: number;
+  retryCounts?: RetryCounts;
 };
 
 export function getState(stateKey: string): RequestState | undefined {

@@ -27,7 +27,7 @@ export interface CorruptorConfig {
   br?: TargetIndex;
   /**
    * - If fields is null, it means it's a no-op and ignored when parsing to query string
-   * It's primarely used to indicate when the default * index operator should be overridden
+   * It's primarily used to indicate when the default * index operator should be overridden
    * with nothing.
    *
    * ex: ...&config=[{i:*, fields:{something:123}}, {i:0}] <-- index 0 will not get any config url query in the manifest.
@@ -41,7 +41,8 @@ export interface CorruptorConfig {
 
 export type IndexedCorruptorConfigMap = Map<TargetIndex, CorruptorConfigMap>;
 export type LevelCorruptorConfigMap = Map<TargetLevel, CorruptorConfigMap>;
-
+/** A map of sequence numbers and a count of how many times they've been retried */
+export type RetryCounts = Map<number, number>;
 export type CorruptorConfigMap = Map<string, CorruptorConfig>;
 
 export interface CorruptorConfigUtils {
@@ -59,7 +60,9 @@ export interface CorruptorConfigUtils {
   ) => [
     ServiceError | null,
     IndexedCorruptorConfigMap | null,
-    LevelCorruptorConfigMap | null
+    LevelCorruptorConfigMap | null,
+    /** Manifest state name */
+    string | null
   ];
 
   getAllSegmentConfigs: () => [ServiceError | null, CorruptorConfigMap | null];
@@ -145,6 +148,8 @@ export const corruptorConfigUtils = function (
       ).filter(({ name }) => urlSearchParams.get(name));
       const segmentBitrate = Number(urlSearchParams.get('bitrate'));
 
+      const stateKey = urlSearchParams.get('state');
+
       for (const config of configs) {
         // JSONify and remove whitespace
         const parsableSearchParam = this.utils.getJSONParsableString(
@@ -208,7 +213,7 @@ export const corruptorConfigUtils = function (
           }
         });
       }
-      return [null, outputMap, levelMap];
+      return [null, outputMap, levelMap, stateKey];
     },
     getAllSegmentConfigs() {
       const outputMap = new Map();

@@ -7,7 +7,9 @@ import throttleSCC from '../../manifests/utils/corruptions/throttle';
 import { corruptorConfigUtils } from '../../manifests/utils/configs';
 import {
   generateErrorResponse,
+  getState,
   isValidUrl,
+  putState,
   refineALBEventQuery
 } from '../../shared/utils';
 import { THROTTLING_PROXY } from '../constants';
@@ -15,7 +17,9 @@ import { THROTTLING_PROXY } from '../constants';
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default async function segmentHandler(
-  event: ALBEvent
+  event: ALBEvent,
+  reqSegmentIndexInt?: number,
+  manifestStateName?: string
 ): Promise<ALBResult> {
   // To be able to reuse the handlers for AWS lambda function - input should be ALBEvent
   const query = refineALBEventQuery(event.queryStringParameters);
@@ -55,19 +59,38 @@ export default async function segmentHandler(
       allSegmentCorr.get('statusCode') &&
       allSegmentCorr.get('statusCode').fields.code !== 'undefined'
     ) {
-      const code = <number>allSegmentCorr.get('statusCode').fields.code;
-      console.log(`Applying corruption with status ${code} to ${query.url}`);
-      return {
-        statusCode: code,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type, Origin'
-        },
-        body: JSON.stringify({
-          message: '[Stream Corruptor]: Applied Status Code Corruption'
-        })
-      };
+      const state = getState(manifestStateName);
+      const retryCounts = state.retryCounts;
+
+      // Always increase the count
+      const retryCount = retryCounts.get(reqSegmentIndexInt) ?? 0;
+      retryCounts.set(reqSegmentIndexInt, retryCount + 1);
+      putState(manifestStateName, { ...state, retryCounts });
+
+      const numberOfTimesToError = <number>(
+        allSegmentCorr.get('statusCode').fields.errorCount
+      );
+
+      // Error every time if no numberOfTimesToError are set, or error numberOfTimesToError times
+      if (!numberOfTimesToError || retryCount < numberOfTimesToError) {
+        console.log(
+          `Retry count ${retryCount} for segment ${reqSegmentIndexInt}`,
+          reqSegmentIndexInt
+        );
+        const code = <number>allSegmentCorr.get('statusCode').fields.code;
+        console.log(`Applying corruption with status ${code} to ${query.url}`);
+        return {
+          statusCode: code,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Origin'
+          },
+          body: JSON.stringify({
+            message: '[Stream Corruptor]: Applied Status Code Corruption'
+          })
+        };
+      }
     }
     // apply Throttle
     if (

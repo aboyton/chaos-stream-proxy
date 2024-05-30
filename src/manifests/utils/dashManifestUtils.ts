@@ -14,7 +14,8 @@ interface DASHManifestUtils {
 export interface DASHManifestTools {
   createProxyDASHManifest: (
     dashManifestText: string,
-    originalUrlQuery: URLSearchParams
+    originalUrlQuery: URLSearchParams,
+    stateKey?: string | undefined
   ) => Manifest; // look def again
   utils: DASHManifestUtils;
 }
@@ -53,7 +54,8 @@ export default function (): DASHManifestTools {
     utils,
     createProxyDASHManifest(
       dashManifestText: string,
-      originalUrlQuery: URLSearchParams
+      originalUrlQuery: URLSearchParams,
+      stateKey?: string | undefined
     ): string {
       const parser = new xml2js.Parser();
       const builder = new xml2js.Builder();
@@ -99,6 +101,11 @@ export default function (): DASHManifestTools {
             );
 
             if (changed) staticQueryUrl = new URLSearchParams(urlQuery);
+
+            if (stateKey) {
+              urlQuery.set('state', stateKey);
+            }
+
             const proxy = proxyPathBuilder(
               mediaUrl.match(/^http/) ? mediaUrl : baseUrl + mediaUrl,
               urlQuery,
@@ -145,6 +152,10 @@ export default function (): DASHManifestTools {
 
                   if (representation.$.bandwidth) {
                     urlQuery.set('bitrate', representation.$.bandwidth);
+                  }
+
+                  if (stateKey) {
+                    urlQuery.set('state', stateKey);
                   }
 
                   const proxy = proxyPathBuilder(

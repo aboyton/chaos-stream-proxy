@@ -61,7 +61,7 @@ export default async function hlsMediaHandler(
       .register(timeoutSCC)
       .register(throttleSCC);
 
-    const mediaSequence = mediaM3U.get('mediaSequence');
+    const mediaSequence: number = mediaM3U.get('mediaSequence');
     let mediaSequenceOffset = 0;
     if (STATEFUL) {
       const stateKey = reqQueryParams.get('state');

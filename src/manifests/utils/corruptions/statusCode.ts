@@ -11,11 +11,16 @@ interface StatusCodeConfig {
   sq?: TargetIndex;
   ch?: number;
   code: number;
+  errorCount?: number;
 }
 
 function getManifestConfigError(value: { [key: string]: any }): string {
   const o = value as StatusCodeConfig;
   if (o.code && typeof o.code !== 'number') {
+    return statusCodeExpectedQueryFormatMsg;
+  }
+
+  if (o.errorCount && typeof o.errorCount !== 'number') {
     return statusCodeExpectedQueryFormatMsg;
   }
 
@@ -74,7 +79,10 @@ const statusCodeConfig: SegmentCorruptorQueryConfig = {
       }
 
       const { code, i, sq } = config;
-      const fields = code ? { code } : null;
+      const fields = {
+        ...(code && { code }),
+        ...(config.errorCount && { errorCount: config.errorCount })
+      };
 
       // If * is already set, we skip
       if (!configIndexMap.has('*') && !configSqMap.has('*')) {
@@ -127,7 +135,8 @@ const statusCodeConfig: SegmentCorruptorQueryConfig = {
         i: config.i,
         sq: config.sq,
         fields: {
-          code: config.code
+          code: config.code,
+          errorCount: config.errorCount
         }
       }
     ];
