@@ -19,16 +19,15 @@ export default async function dashHandler(event: ALBEvent): Promise<ALBResult> {
   }
 
   try {
-    const originalDashManifestResponse = await fetch(url);
-    const responseCopy = originalDashManifestResponse.clone();
-    if (!originalDashManifestResponse.ok) {
+    const dashManifestResponse = await fetch(url);
+    if (!dashManifestResponse.ok) {
       return generateErrorResponse({
-        status: originalDashManifestResponse.status,
+        status: dashManifestResponse.status,
         message: 'Unsuccessful Source Manifest fetch'
       });
     }
     const reqQueryParams = new URLSearchParams(event.queryStringParameters);
-    const text = await responseCopy.text();
+    const text = await dashManifestResponse.text();
     const dashUtils = dashManifestUtils();
     const proxyManifest = dashUtils.createProxyDASHManifest(
       text,
